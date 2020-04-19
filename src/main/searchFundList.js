@@ -6,6 +6,14 @@
  * @Description: 文件描述
  *
 *********************/
+/*********************
+ *
+ * @Author: 桔子桑
+ * @Date: 2020-04-18 19:11:31
+ * @FilePath: /Fund-analysis/src/main/searchFundList.js
+ * @Description: 文件描述
+ *
+*********************/
 const puppeteer = require('puppeteer');
 const id = process.argv[2];
 
@@ -45,6 +53,7 @@ const id = process.argv[2];
         var tr = trs[i];
         var td = tr.querySelectorAll('td');
         var obj = {
+            // pid:id,
             id:td[0].querySelectorAll('a')[1].innerText,
             name:td[0].querySelectorAll('a')[0].innerText,
         }

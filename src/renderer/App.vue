@@ -5,7 +5,7 @@
  * @Description: 文件描述
 -->
 <template>
-  <div id="app" :style="style">
+  <div id="app" :style="style" >
     <div class="menu" @mouseenter="menuenter(true)" @mouseleave="menuenter(false)" style="-webkit-app-region: drag;">
       <Icon type="ios-close" :color="menu?'black':'#ed6c60'" @click="win('close')"/>
       <Icon type="ios-remove" :color="menu?'black':'#f6be4f'" @click="win('min')"/>
@@ -18,6 +18,7 @@
 
 <script>
 import {ipcRenderer} from 'electron'
+const { remote } = require('electron')
 
   export default {
     name: 'elelg',
@@ -32,11 +33,12 @@ import {ipcRenderer} from 'electron'
       window.router = this.$router;
     },
     methods:{
+
       resize(){
-        var scale = 0.8;
+        var w = 1240,h = 600;
+        remote.getCurrentWindow().setSize(w, h);
         this.style = {
-          // width:(1080 * scale) + 'px',
-          height:(768 * scale - 14) + 'px'
+          height:h + 'px'
         }
       },
       menuenter(bool){
@@ -70,7 +72,7 @@ import {ipcRenderer} from 'electron'
   min-height:540px;
   width:100%;
   position:relative;
-  background:rgb(72, 123, 231);
+  background:rgb(235, 94, 94);
   .menu{
     background: rgba(255, 255, 255, 0.8);
     height:26px;

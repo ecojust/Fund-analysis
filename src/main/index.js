@@ -127,6 +127,16 @@ ipcMain.on('getFundDetails',(event, arg)=>{
   });
 })
 
+
+/**
+ * 获取options
+ */
+ipcMain.on('getOptions',(event, arg)=>{
+  readFundList();
+  readCompanyList();
+})
+
+
 /**
  * save json
  */
@@ -138,6 +148,32 @@ ipcMain.on('savejson',(event, arg)=>{
 
   })
 })
+
+
+ipcMain.on('saveignore',(event, arg)=>{
+  fs.writeFile( require('path').join(__dirname, '/json/ignore.json') ,arg,function(err){
+    // getIgnore();
+  })
+})
+
+ipcMain.on('getignorelist',(event, arg)=>{
+  getIgnore();
+})
+
+function getIgnore(){
+  console.log('--------get ignore-------');
+
+  fs.readFile(require('path').join(__dirname, '/json/ignore.json') , function(err, data) {
+    // 读取文件失败/错误
+    var source = []
+    if (err) {
+      source = source.toString();
+    }else{
+      source = data.toString();
+    }
+    mainWindow.webContents.send('getignore',source);
+  });
+}
 
 /**
  * savefundlist
@@ -173,35 +209,76 @@ function readFundList(){
   });
 }
 
-function autoAnalysis(){
-  var companyurl = require('path').join(__dirname, '/json/company.json');
-  fs.readFile(companyurl, function(err, data) {
-      var companylist = JSON.parse(data.toString());
-      for(var i = 0;i<companylist.length;i++){
-        console.log('--------puppeteer request fundlist-------');
-        var script = require('path').join(__dirname, '/') + 'searchFundList.js';
-        exec(`
-          node ${script} ${companylist[i].id}
-        `, (error, stdout, stderr) => {
-          if (error) {
-            throw error;
-          }
-          // console.log('over',stdout)
-          (function(i){
-            var fundlisturl = require('path').join(__dirname, '/json/fundlist.json');
-            fs.readFile(fundlisturl, function(err, data) {
-                  var fundlist = JSON.parse(data.toString());
-                  fundlist[companylist[i].id] = JSON.parse(stdout);
-                  fs.writeFile(fundlisturl ,JSON.stringify(fundlist),function(err){
-
-                  })
-            });
-          })(i)
-        });
-      }
+function readCompanyList(){
+  var url = require('path').join(__dirname, '/json/company.json');
+  fs.readFile(url, function(err, data) {
+      var source = JSON.parse(data.toString());
+      mainWindow.webContents.send('readCompanyList',data.toString());
   });
 }
-// autoAnalysis();
+
+
+
+
+function autoAnalysis(){
+    var fundlisturl = require('path').join(__dirname, '/json/fundlist.json');
+    fs.readFile(fundlisturl, function(err, data) {
+          var fundlist = JSON.parse(data.toString());
+          var arr = [];
+          for(var key in fundlist){
+            arr = arr.concat(fundlist[key])
+          }
+          var index = 0,size = arr.length;
+          function todo(){
+            var fund = arr.shift();
+            if(fund){
+              index++;
+              console.log(fund)
+              var fundId = fund.id;
+              console.log('--------puppeteer request fundDetails-------');
+              var script = require('path').join(__dirname, '/') + 'searchFundDetails.js';
+              exec(`
+                node ${script} ${fundId}
+              `, (error, stdout, stderr) => {
+                if (error) {
+                  throw error;
+                }
+                formatdata(stdout,fund);
+                mainWindow.webContents.send('progress',`${index} / ${size}`)
+                todo();
+              });
+            }else{
+              mainWindow.webContents.send('AnalysisOver')
+            }
+          }
+          todo();
+    });
+}
+
+function formatdata(jsonp,fund){
+  try{
+    var res = jsonp.split('(').slice(1).join().split(')')[0];
+    res = JSON.parse(res).Data[0].data;
+    var size = res.length;
+    var data = [];
+    for(var i = 0;i<size;i++){
+      data.push(res[i][1]);
+    }
+    var min = Math.min(...data),max = Math.max(...data),latest = data[size-1];
+    var rate =1 -  (latest-min)/(max-min);
+    if(rate > 0.8){
+      mainWindow.webContents.send('Analysis',Object.assign(fund,{
+        max:max,
+        min:min,
+        latest:latest,
+        rate:rate
+      }));
+    }
+  }catch(e){
+
+  }
+}
+autoAnalysis();
 
 
 
@@ -213,10 +290,6 @@ function autoAnalysis(){
 
 
 
-
-
-
-// http://fund.eastmoney.com/Company/f10/jjjz_80000226.html
 
 
 

@@ -113,6 +113,7 @@ export default {
     ipcRenderer$on(){
       ipcRenderer.on('getFundList',(sender,data)=>{
         var data = JSON.parse(data);
+        console.log(data)
         this.fundList = data.fundList;
         this.company = data.company;
 
@@ -121,6 +122,9 @@ export default {
           filename:id+'|'+data.company.name+'.json',
           data:data.fundList
         }
+        savedata.data.map(item=>{
+          item.pid = id
+        })
         ipcRenderer.send('savefundlist',JSON.stringify(savedata))
         
 

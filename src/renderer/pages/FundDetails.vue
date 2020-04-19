@@ -32,6 +32,20 @@
       </div>
     </div>
 
+    <Select v-model="com" style="width:350px;position:absolute;right:400px;top:50px;">
+        <Option v-for="item in company" :value="item.id" :key="item.name">{{item.id + ' | ' + item.name }}</Option>
+    </Select>
+
+    <Select @on-change="change" v-model="id" style="width:350px;position:absolute;right:20px;top:50px;">
+        <Option v-show="com==item.pid&&!~ignore.indexOf(item.id)" v-for="item in options" :value="item.id" :key="item.name">{{item.id +' | '+item.name }}</Option>
+    </Select>
+
+    <Button type="primary" style="position:absolute;right:20px;top:100px;" @click="saveignore(true)">加入黑名单</Button>
+    <Button type="primary" style="position:absolute;right:20px;top:140px;" @click="saveignore(false)">移出黑名单</Button>
+
+
+    
+
   </div>
 </template>
 
@@ -50,7 +64,12 @@ export default {
       max:0,
       min:0,
       latest:0,
-      rate:0
+      rate:0,
+      options:[],
+      model1:0,
+      company:[],
+      com:'',
+      ignore:[]
     }
   },
   created(){
@@ -62,12 +81,45 @@ export default {
     this.ipcRenderer$on();
     var id = this.$route.query.id;
     this.id = id;
-    ipcRenderer.send('getFundDetails',id)
+    ipcRenderer.send('getFundDetails',id);
+    ipcRenderer.send('getOptions');
+    ipcRenderer.send('getignorelist');
   },
   beforeDestroy(){
     ipcRenderer.removeAllListeners();
   },
   methods:{
+    change(){
+      this.data = [];
+      ipcRenderer.send('getFundDetails',this.id)
+    },
+    saveignore(bool){
+      if(bool){
+        this.ignore.push(this.id);
+      }else{
+        Array.prototype.remove = function(val) { 
+          var index = this.indexOf(val); 
+          if (index > -1) { 
+            this.splice(index, 1); 
+          } 
+        };
+        this.ignore.remove(this.id);
+      }
+      function distinct(arr) {
+          let result = []
+          let obj = {}
+          for (let i of arr) {
+              if (!obj[i]) {
+                  result.push(i)
+                  obj[i] = 1
+              }
+          }
+          return result
+      }
+      this.ignore = distinct(this.ignore);
+      ipcRenderer.send('saveignore',JSON.stringify(this.ignore));
+      this.$Message.info(`${this.id} | ${this.name} 已加入黑名单!`)
+    },
     ipcRenderer$on(){
       ipcRenderer.on('getFundDetails',(sender,data)=>{
         // var data = JSON.parse(data);
@@ -80,9 +132,33 @@ export default {
 
       ipcRenderer.on('readFundList',(sender,data)=>{
         var data = JSON.parse(data);
-        console.log(data)
+        // console.log('---------基金列表--------')
+        var options = [];
+        for(var key in data){
+          var arr = data[key];
+          arr.map(item=>{
+            options.push(item)
+          })
+        }
+        // console.log(options)
+
+        this.options = options;
       });
 
+      ipcRenderer.on('readCompanyList',(sender,data)=>{
+        var data = JSON.parse(data);
+        // console.log('---------公司列表--------')
+        // console.log(data)
+
+        this.company = data;
+      });
+
+      ipcRenderer.on('getignore',(sender,data)=>{
+        var data = JSON.parse(data);
+        console.log('---------getignore--------')
+        console.log(data);
+        this.ignore = data;
+      });
 
       
     },
