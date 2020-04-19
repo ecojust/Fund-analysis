@@ -35,7 +35,7 @@ const { remote } = require('electron')
     methods:{
 
       resize(){
-        var w = 1240,h = 600;
+        var w = 1240,h = 940;
         remote.getCurrentWindow().setSize(w, h);
         this.style = {
           height:h + 'px'

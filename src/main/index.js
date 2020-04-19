@@ -121,9 +121,6 @@ ipcMain.on('getFundDetails',(event, arg)=>{
       throw error;
     }
     mainWindow.webContents.send('getFundDetails',stdout);
-    setTimeout(()=>{
-      readFundList();
-    },3000)
   });
 })
 
@@ -217,45 +214,84 @@ function readCompanyList(){
   });
 }
 
+function readAnalysis(){
+  var url = require('path').join(__dirname, '/json/fundAnalysis.json');
+  fs.readFile(url, function(err, data) {
+      var source = JSON.parse(data.toString());
+      mainWindow.webContents.send('readAnalysis',data.toString());
+  });
+}
 
 
 
-function autoAnalysis(){
+
+
+
+function autoAnalysis(rate){
     var fundlisturl = require('path').join(__dirname, '/json/fundlist.json');
     fs.readFile(fundlisturl, function(err, data) {
           var fundlist = JSON.parse(data.toString());
           var arr = [];
+          var idx = 1;
           for(var key in fundlist){
-            arr = arr.concat(fundlist[key])
+            // if(idx>10){
+              arr = arr.concat(fundlist[key])
+            // }
+            idx++;
           }
           var index = 0,size = arr.length;
-          function todo(){
-            var fund = arr.shift();
-            if(fund){
-              index++;
-              console.log(fund)
-              var fundId = fund.id;
-              console.log('--------puppeteer request fundDetails-------');
-              var script = require('path').join(__dirname, '/') + 'searchFundDetails.js';
-              exec(`
-                node ${script} ${fundId}
-              `, (error, stdout, stderr) => {
-                if (error) {
-                  throw error;
-                }
-                formatdata(stdout,fund);
-                mainWindow.webContents.send('progress',`${index} / ${size}`)
-                todo();
-              });
-            }else{
-              mainWindow.webContents.send('AnalysisOver')
-            }
+          function againGroup (data,num){
+          　　var result=[];
+          　　for(var i=0,len=data.length;i<len;i+=num){
+          　　　　result.push(data.slice(i,i+num));
+          　　}
+          　　return result;
           }
-          todo();
+
+          var cpus = againGroup(arr,5000);
+          // var cpus = arr;
+
+          var num = [];
+          for(var i =0;i<cpus.length;i++){
+            (function(i){
+              var itemdata = cpus[i];
+              num[i]=0;
+              function todo(){
+                var fund = itemdata.shift();
+                if(fund){
+                  num[i]++;
+                  console.log(fund)
+                  var fundId = fund.id;
+                  console.log(`--------puppeteer request fundDetails 线程${i}---${rate}-------`);
+                  var script = require('path').join(__dirname, '/') + 'searchFundDetails.js';
+                  exec(`
+                    node ${script} ${fundId}
+                  `, (error, stdout, stderr) => {
+                    if (error) {
+                      throw error;
+                    }
+                    formatdata(stdout,fund,rate);
+                    var sum = 0;
+                    num.forEach(ele => {
+                        sum += ele;
+                    });
+                    mainWindow.webContents.send('progress',`${sum} / ${size}`)
+                    todo();
+                  });
+                }else{
+                  mainWindow.webContents.send('AnalysisOver')
+                }
+              }
+              todo();
+            })(i)
+            
+          }
+
+          
     });
 }
 
-function formatdata(jsonp,fund){
+function formatdata(jsonp,fund,per){
   try{
     var res = jsonp.split('(').slice(1).join().split(')')[0];
     res = JSON.parse(res).Data[0].data;
@@ -266,7 +302,7 @@ function formatdata(jsonp,fund){
     }
     var min = Math.min(...data),max = Math.max(...data),latest = data[size-1];
     var rate =1 -  (latest-min)/(max-min);
-    if(rate > 0.8){
+    if(rate > per){
       mainWindow.webContents.send('Analysis',Object.assign(fund,{
         max:max,
         min:min,
@@ -278,7 +314,61 @@ function formatdata(jsonp,fund){
 
   }
 }
-autoAnalysis();
+
+ipcMain.on('analysisStart',(event, arg)=>{
+  autoAnalysis(arg);
+})
+
+
+
+
+function autoCompany(){
+  var companyurl = require('path').join(__dirname, '/json/company.json');
+  fs.readFile(companyurl, function(err, data) {
+        var companylist = JSON.parse(data.toString());
+        var index = 1,size = companylist.length;
+        function todo(){
+          var company = companylist.shift();
+          index++;
+
+          if(company){
+            if(company.fundCount>0&&~~company.level>4){
+              console.log(company)
+              var companyId = company.id;
+              console.log(`--------puppeteer request companyfundlist ${index} -------`);
+              var script = require('path').join(__dirname, '/') + 'searchFundList.js';
+              exec(`
+                node ${script} ${companyId}
+              `, (error, stdout, stderr) => {
+                if (error) {
+                  throw error;
+                }
+                var outJson = JSON.parse(stdout);
+                var fundlisturl = require('path').join(__dirname, '/json/fundlist.json');
+                fs.readFile(fundlisturl, function(err, data) {
+                    var source = JSON.parse(data.toString());
+                    source[companyId+'|'+outJson.company.name] = outJson.fundList;
+                    fs.writeFile(fundlisturl ,JSON.stringify(source),function(err){
+                      todo();
+                    })
+                });
+              });
+            }else{
+              todo();
+            }
+            
+          }else{
+          }
+        }
+        todo();
+  });
+}
+
+// autoCompany();
+
+
+
+
 
 
 

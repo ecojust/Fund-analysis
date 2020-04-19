@@ -1,3 +1,9 @@
+<!--
+ * @Author: 桔子桑
+ * @Date: 2019-07-23 18:16:34
+ * @FilePath: /Fund-analysis/src/index.ejs
+ * @Description: 文件描述
+ -->
 <!DOCTYPE html>
 <html>
   <head>
@@ -6,6 +12,9 @@
     <% if (htmlWebpackPlugin.options.nodeModules) { %>
       <!-- Add `node_modules/` to global paths so `require` works properly in development -->
       <script>
+        window.config = {
+          api:'http://localhost:9080'
+        }
         require('module').globalPaths.push('<%= htmlWebpackPlugin.options.nodeModules.replace(/\\/g, '\\\\') %>')
       </script>
     <% } %>

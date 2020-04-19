@@ -234,15 +234,15 @@ export default {
                   symbol: 'none',
                   sampling: 'average',
                   itemStyle: {
-                      color: 'rgb(255, 70, 131)'
+                      color: 'rgb(55, 70, 131)'
                   },
                   areaStyle: {
                       color: this.$echarts.graphic.LinearGradient(0, 0, 0, 1, [{
                           offset: 0,
-                          color: 'rgb(255, 158, 68)'
+                          color: 'rgb(55, 158, 68)'
                       }, {
                           offset: 1,
-                          color: 'rgb(255, 70, 131)'
+                          color: 'rgb(55, 70, 131)'
                       }])
                   },
                   data: data
@@ -262,7 +262,7 @@ export default {
 .FundDetails{
   .area{
     width:100%;
-    height:400px;
+    height:360px;
   }
   .analysis{
     text-align:left;
